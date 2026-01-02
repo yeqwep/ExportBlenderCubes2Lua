@@ -3,7 +3,7 @@ This Blender add-on exports placed Cube objects into a Lua table.
 ## ⚠️ Important:
 This add-on does NOT create game engine instances or scene objects.
 It only outputs structured Lua data describing the cubes.
-The responsibility for instantiating objects lies entirely on the Defold side.
+The responsibility for instantiating objects lies entirely on the GameEngine side.
 
 ## Features
 This add-on **only exports data**.
