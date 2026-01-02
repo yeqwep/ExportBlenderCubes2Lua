@@ -51,6 +51,11 @@ Other mesh types are ignored by design.
 3. Position / rotate / scale the Cubes as desired
 4. Run the exporter from: * `File → Export → Cube to Lua Table`
 5. Choose a destination .lua file
+<img src="pic/1.png" width="400">
+
+> [!TIP]
+> **Size Note:** Blender's default cube is **2.0 units**. Set it to **1.0 unit** to match the visual scale of most game engines.
+<img src="pic/2.png" width="400">
 
 ## Coordinate System Notes
 Blender and Defold use different axis conventions. This add-on exports raw Blender coordinates **without automatic axis conversion**.
@@ -70,6 +75,9 @@ They are provided only as a **reference implementation**, to show one possible w
 - Load the exported Lua table
 - Create GameObjects from the data
 - Write `.go` files or spawn instances
+
+<img src="pic/3.png" width="400">
+<img src="pic/4.png" width="400">
 
 These examples are **not required** to use this add-on.
 
