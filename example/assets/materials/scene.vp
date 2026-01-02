@@ -1,0 +1,19 @@
+#version 140
+
+in vec4 position;
+in vec2 texcoord0;
+
+uniform vertex_inputs
+{
+    mat4 mtx_worldview;
+    mat4 mtx_proj;
+};
+
+out vec2 var_texcoord0;
+
+void main()
+{
+    vec4 p = mtx_worldview * vec4(position.xyz, 1.0);
+    var_texcoord0 = texcoord0;
+    gl_Position = mtx_proj * p;
+}

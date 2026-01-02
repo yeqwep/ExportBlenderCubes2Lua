@@ -1,0 +1,14 @@
+local cubes = require("main.Untitled")
+
+function init(self)
+    for i, cube in ipairs(cubes) do
+        local pos = vmath.vector3(cube.position.x, cube.position.y, cube.position.z)
+        local rx = vmath.quat_rotation_x(math.rad(cube.rotation.x))
+        local ry = vmath.quat_rotation_y(math.rad(cube.rotation.y))
+        local rz = vmath.quat_rotation_z(math.rad(cube.rotation.z))
+        local rot = rz * ry * rx
+        local scale = vmath.vector3(cube.scale.x, cube.scale.y, cube.scale.z)
+
+        factory.create("/go#factory", pos, rot, {shape_scale = scale}, scale)
+    end
+end

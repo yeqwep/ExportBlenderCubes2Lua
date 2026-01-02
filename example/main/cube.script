@@ -1,0 +1,8 @@
+go.property("shape_scale", vmath.vector3(1))
+
+function init(self)
+	local data = {}
+	data.type = physics.SHAPE_TYPE_BOX
+	data.dimensions = vmath.vector3(self.shape_scale.x, self.shape_scale.y, self.shape_scale.z)
+	physics.set_shape("#collisionobject", "box", data)
+end

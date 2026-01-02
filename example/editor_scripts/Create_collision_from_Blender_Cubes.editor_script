@@ -1,0 +1,221 @@
+-- -- ----------------------------------------------
+-- -- Create_collision_from_Blender_Cubes
+-- -- ----------------------------------------------
+local M = {}
+-- -- ----------------------------------------------
+-- Utilities
+-- -- ----------------------------------------------
+local COLLISION_TEMPLATE = [[
+embedded_components {
+    id: "collisionobject"
+    type: "collisionobject"
+    data: "type: COLLISION_OBJECT_TYPE_STATIC\n"
+    "mass: 0.0\n"
+    "friction: 0.1\n"
+    "restitution: 0.5\n"
+    "group: \"default\"\n"
+    "mask: \"default\"\n"
+    "embedded_collision_shape {\n"
+]]
+
+local COLLISION_TEMPLATE_END = [[
+    "}\n"
+    ""
+}
+]]
+
+local function generate_box_shape(pos, rot, index)
+    local template = [[
+    "  shapes {\n"
+    "    shape_type: TYPE_BOX\n"
+    "    position {\n"
+    "      x: %.1f\n"
+    "      y: %.1f\n"
+    "      z: %.1f\n"
+    "    }\n"
+    "    rotation {\n"
+    "    x: %.8f\n"
+    "    y: %.8f\n"
+    "    z: %.8f\n"
+    "    w: %.8f\n"
+    "  }\n"
+    "  index: %d\n"
+    "  count: 3\n"
+    "  }\n"
+]]
+    
+    return string.format(template, 
+        pos.x, pos.y, pos.z, 
+        rot.x, rot.y, rot.z, rot.w, 
+        index
+    )
+end
+
+local function generate_scale_data(x, y, z)
+    local template = [[
+    "  data: %s\n"
+    "  data: %s\n"
+    "  data: %s\n"
+]]
+    return string.format(template, x, y, z)
+end
+
+local function ends_with(str, suffix)
+    return str:sub(- #suffix) == suffix
+end
+
+local function replace_extension(path, new_ext)
+    if not new_ext:match("^%.") then
+        new_ext = "." .. new_ext
+    end
+    local result = path:gsub("%.[^%.]+$", new_ext)
+    return result
+end
+
+local function file_exists(path, new_ext)
+    if new_ext then
+        path = replace_extension(path, new_ext)
+    end
+    local f, err = io.open("." .. path, "r")
+    if f then f:close() return true end
+    return false, err
+end
+
+local function euler_to_quat_pure_lua(x, y, z)
+    local rad = math.pi / 180
+    local ex, ey, ez = x * rad, y * rad, z * rad
+    local cx, cy, cz = math.cos(ex/2), math.cos(ey/2), math.cos(ez/2)
+    local sx, sy, sz = math.sin(ex/2), math.sin(ey/2), math.sin(ez/2)
+
+    return {
+        x = sx * cy * cz - cx * sy * sz,
+        y = cx * sy * cz + sx * cy * sz,
+        z = cx * cy * sz - sx * sy * cz,
+        w = cx * cy * cz + sx * sy * sz
+    }
+end
+
+local function load_lua_table(path)
+    local f, err = io.open("." .. path, "r")
+    if not f then return nil, err end
+    
+    local content = f:read("*a")
+    f:close()
+
+    local chunk, load_err = load(content)
+    if not chunk then return nil, "Syntax Error: " .. load_err end
+
+    local status, result = pcall(chunk)
+    if not status then return nil, "Runtime Error: " .. result end
+
+    if type(result) ~= "table" then
+        return nil, "Error: File did not return a table"
+    end
+
+    return result
+end
+-- -- ----------------------------------------------
+-- Main Functions
+-- -- ----------------------------------------------
+local function create_cube_collision(path)
+    local cubes, err = load_lua_table(path)
+    if err then
+        return false, err
+    end
+
+    local output = {}
+
+    for i, cube in ipairs(cubes) do
+        local pos = cube.position
+        local rot_deg = cube.rotation
+        local rot = euler_to_quat_pure_lua(rot_deg.x, rot_deg.y, rot_deg.z)
+        local index = (i - 1) * 3
+        local box_shape = generate_box_shape(pos, rot, index)
+        table.insert(output, box_shape)
+    end
+    for _, cube in ipairs(cubes) do
+        local scale = cube.scale 
+        local scale_data = generate_scale_data(scale.x / 2.0, scale.y / 2.0, scale.z / 2.0)
+        table.insert(output, scale_data)
+    end
+
+    table.insert(output, 1, COLLISION_TEMPLATE)
+    table.insert(output, COLLISION_TEMPLATE_END)
+
+    local result = table.concat(output, "\n")
+
+    local dir_path, file_name = path:match("^(.-)([^/\\]+)$")
+    dir_path = dir_path or ""
+    local base_name = file_name:match("^(%S+)") or file_name
+    base_name = base_name:gsub("%.lua$", "")
+
+    local go_path = "." .. dir_path .. base_name .. ".go"
+
+    local go_file = io.open(go_path, "w")
+    if not go_file then
+        return false, "Failed to write output file: " .. go_path
+    end
+    go_file:write(result)
+    go_file:close()
+
+    return true, go_path
+end
+
+function M.get_commands()
+    return {
+        {
+            label = "Create collision from Blender Cubes",
+            locations = { "Assets" },
+            active = function(opts)
+                local id = opts.selection
+                local path = editor.get(id, "path")
+                if ends_with(path, ".lua") then
+                    return true
+                end
+                return false
+            end,
+            query = {
+                selection = { type = "resource", cardinality = "one" }
+            },
+            run = function(opts)
+                local id = opts.selection
+                local path = editor.get(id, "path")
+
+                local button_result = true
+                 if file_exists(path, ".go") then
+                    button_result = editor.ui.show_dialog(editor.ui.dialog({
+                        title = "An existing game object was found. Overwrite it?",
+                        buttons = {
+                            editor.ui.dialog_button({
+                                text = "Cancel",
+                                default = true,
+                                cancel = true,
+                                result = false
+                            }),
+                            editor.ui.dialog_button({
+                                text = "Overwrite it",
+                                result = true
+                            })
+
+                        }
+                    }))
+                end
+                if button_result then
+                    if ends_with(path, ".lua") then
+                        local ok, target_path = create_cube_collision(path)
+                        if ok then
+                            print("Lua converted: " .. target_path)
+                        else
+                            print("Error: " .. target_path)
+                        end
+                    end
+                else
+                    print("Process canceled.")
+                end
+
+            end,
+        }
+    }
+end
+
+return M

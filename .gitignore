@@ -1,0 +1,19 @@
+# Defold basics
+.editor_settings/
+.internal/
+build/
+.externalToolBuilders/
+.lock-wscript
+.project
+.cproject
+builtins/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Python / Blender
+*.pyc
+__pycache__/
+*.blend1
+*.swp
