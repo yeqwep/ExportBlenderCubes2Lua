@@ -12,6 +12,7 @@ It converts Blender Cube objects into a **Lua table** describing:
 - position
 - rotation (degrees)
 - scale
+
 Beginner-friendly, minimal setup
 
 ## Example Output
